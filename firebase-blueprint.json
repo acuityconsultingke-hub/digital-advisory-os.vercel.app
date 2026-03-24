@@ -1,0 +1,25 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Stores user profile and their financial questionnaire data.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique identifier for the user." },
+        "email": { "type": "string", "format": "email", "description": "The user's email address." },
+        "phoneNumber": { "type": "string", "description": "The user's mobile number." },
+        "displayName": { "type": "string", "description": "The user's display name." },
+        "formData": { "type": "object", "description": "The complete financial questionnaire data." },
+        "currentStep": { "type": "integer", "description": "The last step the user was on." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "The last time the data was saved." }
+      },
+      "required": ["uid", "formData"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of user profiles and their financial data."
+    }
+  }
+}
