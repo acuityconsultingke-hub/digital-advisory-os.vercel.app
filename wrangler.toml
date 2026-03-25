@@ -1,4 +1,4 @@
-name = "acuityacademy"
+name = "acuity-financial-academy-worker"
 main = "workers/index.ts"
 compatibility_date = "2024-03-25"
 account_id = "efb0d280a30898cf54d3604ba09bd708"
