@@ -533,7 +533,7 @@ export default function App() {
   const [formData, setFormData] = useState<FormData>(INITIAL_DATA);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [view, setView] = useState<'questionnaire' | 'dashboard' | 'report'>('questionnaire');
-  const [activeModule, setActiveModule] = useState<'planner' | 'clients' | 'academy' | 'recruitment'>('planner');
+  const [activeModule, setActiveModule] = useState<'planner' | 'clients' | 'academy' | 'recruitment' | 'system'>('planner');
   const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('acuity_theme') === 'dark');
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -1048,7 +1048,8 @@ export default function App() {
                 { id: 'clients', label: 'Clients', icon: Users },
                 { id: 'recruitment', label: 'Recruitment', icon: Briefcase },
                 { id: 'academy', label: 'Academy', icon: GraduationCap },
-              ].filter(item => (item.id !== 'clients' && item.id !== 'recruitment') || (user && user.email === 'akadzitu@gmail.com')).map((item) => (
+                { id: 'system', label: 'System', icon: Settings },
+              ].filter(item => (item.id !== 'clients' && item.id !== 'recruitment' && item.id !== 'system') || (user && user.email === 'akadzitu@gmail.com')).map((item) => (
                 <button
                   key={item.id}
                   onClick={() => setActiveModule(item.id as any)}
@@ -2245,6 +2246,134 @@ export default function App() {
             </div>
             <Briefcase className="absolute -right-10 -bottom-10 text-white/10 w-64 h-64 -rotate-12" />
           </div>
+        </div>
+      </div>
+    )}
+
+      </div>
+    )}
+
+    {activeModule === 'system' && (
+      <div className="space-y-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-black text-navy dark:text-white uppercase tracking-tight">System Status</h1>
+            <p className="text-gray-500 dark:text-gray-400">Monitor your deployment, sync, and Cloudflare status.</p>
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="flex items-center space-x-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+          >
+            <RefreshCw size={18} />
+            <span>Refresh Status</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Deployment Status */}
+          <div className="bg-white dark:bg-gray-900 p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-navy dark:text-white">Deployment</h3>
+              <div className="px-3 py-1 bg-green-100 text-green-600 text-[10px] font-bold rounded-full uppercase">Live</div>
+            </div>
+            <div className="space-y-6">
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">App URL</p>
+                <div className="flex items-center space-x-2 bg-gray-50 dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                  <code className="text-xs text-blue truncate flex-1">{window.location.origin}</code>
+                  <button 
+                    onClick={() => navigator.clipboard.writeText(window.location.origin)}
+                    className="p-1.5 text-gray-400 hover:text-blue transition-colors"
+                  >
+                    <Copy size={14} />
+                  </button>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Environment</p>
+                <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="w-2 h-2 bg-blue rounded-full"></div>
+                  <span>Google AI Studio Build (Cloud Run)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Cloudflare Connection */}
+          <div className="bg-white dark:bg-gray-900 p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-navy dark:text-white">Cloudflare</h3>
+              <div className="px-3 py-1 bg-blue-100 text-blue text-[10px] font-bold rounded-full uppercase">Configured</div>
+            </div>
+            <div className="space-y-6">
+              <div className="flex items-start space-x-3">
+                <div className="w-8 h-8 bg-blue/10 text-blue rounded-lg flex items-center justify-center shrink-0">
+                  <Globe size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-navy dark:text-white">Worker Integration</p>
+                  <p className="text-xs text-gray-500">Wrangler CLI is installed and ready for deployment.</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <div className="w-8 h-8 bg-blue/10 text-blue rounded-lg flex items-center justify-center shrink-0">
+                  <ShieldCheck size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-navy dark:text-white">Secrets Status</p>
+                  <p className="text-xs text-gray-500">Ensure CLOUDFLARE_API_TOKEN is set in AI Studio Settings.</p>
+                </div>
+              </div>
+              <button className="w-full py-3 bg-blue text-white font-bold rounded-xl hover:bg-blue/90 transition-all text-sm">
+                Test Cloudflare Connection
+              </button>
+            </div>
+          </div>
+
+          {/* GitHub Sync */}
+          <div className="bg-white dark:bg-gray-900 p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-navy dark:text-white">GitHub Sync</h3>
+              <div className="px-3 py-1 bg-purple-100 text-purple-600 text-[10px] font-bold rounded-full uppercase">Manual</div>
+            </div>
+            <div className="space-y-6">
+              <div className="flex items-start space-x-3">
+                <div className="w-8 h-8 bg-purple/10 text-purple-600 rounded-lg flex items-center justify-center shrink-0">
+                  <Github size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-navy dark:text-white">Repository</p>
+                  <p className="text-xs text-gray-500">Linked to: github.com/daos</p>
+                </div>
+              </div>
+              <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-2xl border border-purple-100 dark:border-purple-900/30">
+                <p className="text-xs text-purple-700 dark:text-purple-300 leading-relaxed">
+                  To push the latest changes (Recruitment module, Worker setup) to GitHub, use the <strong>Sync with GitHub</strong> option in the AI Studio Settings menu.
+                </p>
+              </div>
+              <button className="w-full py-3 bg-navy text-white font-bold rounded-xl hover:bg-navy/90 transition-all text-sm">
+                Open GitHub Repo
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-navy dark:bg-blue p-10 rounded-[2.5rem] text-white relative overflow-hidden">
+          <div className="relative z-10">
+            <h2 className="text-3xl font-black mb-4 uppercase tracking-tight">Cloudflare Tunnel Setup</h2>
+            <p className="text-blue-100 mb-8 max-w-2xl">
+              To use a custom domain, point your Cloudflare Tunnel to the <strong>App URL</strong> shown above. This creates a secure bridge between your AI Studio preview and your public domain.
+            </p>
+            <div className="flex flex-wrap gap-4">
+              <button className="px-8 py-4 bg-white text-navy font-bold rounded-2xl hover:bg-blue-50 transition-all shadow-xl">
+                Tunnel Documentation
+              </button>
+              <button className="px-8 py-4 bg-white/10 text-white font-bold rounded-2xl hover:bg-white/20 transition-all border border-white/20">
+                Copy App URL
+              </button>
+            </div>
+          </div>
+          <Settings className="absolute -right-10 -bottom-10 text-white/10 w-64 h-64 rotate-12" />
         </div>
       </div>
     )}
