@@ -1,4 +1,4 @@
-name = "acuity-financial-academy-worker"
+name = "acuityacademy"
 main = "workers/index.ts"
 compatibility_date = "2024-03-25"
 
