@@ -1,19 +1,36 @@
-name = "acuity-financial-academy-worker"
-main = "workers/index.ts"
-compatibility_date = "2024-03-25"
+# Worker Configuration
 
-# [vars]
-# MY_VARIABLE = "my-variable-value"
+```toml
+name = "acuityacademy"
+compatibility_date = "2026-03-25"
 
-# [[kv_namespaces]]
-# binding = "MY_KV_NAMESPACE"
-# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+[[env]]
+  key = "VAR1"
+  value = "value1"
 
-# [[r2_buckets]]
-# binding = "MY_BUCKET"
-# bucket_name = "my-bucket"
+[[env]]
+  key = "VAR2"
+  value = "value2"
 
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "my-database"
-# database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+[[bindings.kv]]
+  binding = "KV_NAMESPACE_NAME"
+  id = "kv-namespace-id"
+
+[[bindings.r2]]
+  binding = "R2_BINDING_NAME"
+  bucket = "r2-bucket-name"
+
+[[database.d1]]
+  binding = "D1_DATABASE_BINDING"
+  database = "d1-database-name"
+
+# Production Environment Configuration
+[env.production]
+VAR1 = "prod_value1"
+VAR2 = "prod_value2"
+
+# Development Environment Configuration
+[env.development]
+VAR1 = "dev_value1"
+VAR2 = "dev_value2"
+```
