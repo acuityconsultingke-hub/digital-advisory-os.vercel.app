@@ -1,5 +1,5 @@
 {
-  "name": "Acuity Financial Academy",
+  "name": "acuityacademy",
   "description": "A comprehensive Financial Academy platform for Acuity, featuring client management, broker recruitment, Cloudflare Worker integration, and educational resources.",
   "requestFramePermissions": []
 }
