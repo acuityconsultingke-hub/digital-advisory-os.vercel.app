@@ -2386,24 +2386,58 @@ export default function App() {
               <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 text-red-600 rounded-2xl flex items-center justify-center">
                 <AlertCircle size={24} />
               </div>
-              <h2 className="text-3xl font-black text-navy dark:text-white uppercase tracking-tight">Fixing 522 Errors</h2>
+              <h2 className="text-3xl font-black text-navy dark:text-white uppercase tracking-tight">Critical: DNS Fix Required</h2>
             </div>
             <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-2xl">
-              A 522 error means Cloudflare cannot reach your AI Studio "host." This happens when your Cloudflare Tunnel is pointing to an outdated URL. Update your <strong>Service URL</strong> in Cloudflare to the one below:
+              Your domain <code className="text-red-600 font-bold">acuityke.site</code> is currently pointing to a Namecheap parking IP (<code className="text-red-600 font-bold">192.64.119.239</code>). This is why you see a 522 error. 
+              <strong> You must delete the A Record and use a Cloudflare Tunnel instead.</strong>
             </p>
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-              <div className="flex-1 bg-white dark:bg-gray-900 p-4 rounded-2xl border border-red-200 dark:border-red-800 font-mono text-xs text-red-600 break-all">
-                {window.location.origin}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">1. Delete from DNS</p>
+                <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                  <li className="flex items-center space-x-2">
+                    <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                    <span>A Record: 192.64.119.239</span>
+                  </li>
+                  <li className="flex items-center space-x-2">
+                    <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                    <span>CNAME: parkingpage.namecheap.com</span>
+                  </li>
+                </ul>
               </div>
+              <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-green-200 dark:border-green-900">
+                <p className="text-xs font-bold text-green-600 uppercase tracking-widest mb-4">2. Add to Tunnel</p>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">Type:</span>
+                    <span className="font-bold text-navy dark:text-white">HTTPS</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">URL:</span>
+                    <span className="font-bold text-blue truncate ml-4">ais-dev-jazexha7rkyxzo75ofsckm-258783686683.europe-west1.run.app</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
               <button 
                 onClick={() => {
-                  navigator.clipboard.writeText(window.location.origin);
-                  alert('Origin URL copied! Paste this into your Cloudflare Tunnel settings.');
+                  navigator.clipboard.writeText('ais-dev-jazexha7rkyxzo75ofsckm-258783686683.europe-west1.run.app');
+                  alert('Tunnel Service URL copied!');
                 }}
-                className="px-8 py-4 bg-red-600 text-white font-bold rounded-2xl hover:bg-red-700 transition-all shadow-xl flex items-center space-x-2"
+                className="px-8 py-4 bg-navy text-white font-bold rounded-2xl hover:bg-navy/90 transition-all shadow-xl flex items-center space-x-2"
               >
                 <Copy size={18} />
-                <span>Copy Origin URL</span>
+                <span>Copy Tunnel URL</span>
+              </button>
+              <button 
+                onClick={() => window.open('https://one.dash.cloudflare.com/', '_blank')}
+                className="px-8 py-4 bg-white text-navy font-bold rounded-2xl hover:bg-gray-50 transition-all border border-gray-200"
+              >
+                Open Zero Trust Dashboard
               </button>
             </div>
           </div>
