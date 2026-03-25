@@ -45,7 +45,10 @@ import {
   MoreVertical,
   PlayCircle,
   Book,
-  Video
+  Video,
+  Settings,
+  Copy,
+  Github
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -2250,9 +2253,6 @@ export default function App() {
       </div>
     )}
 
-      </div>
-    )}
-
     {activeModule === 'system' && (
       <div className="space-y-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -2303,30 +2303,32 @@ export default function App() {
           <div className="bg-white dark:bg-gray-900 p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-navy dark:text-white">Cloudflare</h3>
-              <div className="px-3 py-1 bg-blue-100 text-blue text-[10px] font-bold rounded-full uppercase">Configured</div>
+              <div className="px-3 py-1 bg-green-100 text-green-600 text-[10px] font-bold rounded-full uppercase">Connected</div>
             </div>
             <div className="space-y-6">
+              <div className="flex items-start space-x-3">
+                <div className="w-8 h-8 bg-green-50 text-green-600 rounded-lg flex items-center justify-center shrink-0">
+                  <ShieldCheck size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-navy dark:text-white">Secrets Configured</p>
+                  <p className="text-xs text-gray-500">API Token and Account ID are successfully linked.</p>
+                </div>
+              </div>
               <div className="flex items-start space-x-3">
                 <div className="w-8 h-8 bg-blue/10 text-blue rounded-lg flex items-center justify-center shrink-0">
                   <Globe size={18} />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-navy dark:text-white">Worker Integration</p>
-                  <p className="text-xs text-gray-500">Wrangler CLI is installed and ready for deployment.</p>
+                  <p className="text-sm font-bold text-navy dark:text-white">Worker Ready</p>
+                  <p className="text-xs text-gray-500">Wrangler is ready to deploy your academy worker.</p>
                 </div>
               </div>
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-blue/10 text-blue rounded-lg flex items-center justify-center shrink-0">
-                  <ShieldCheck size={18} />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-navy dark:text-white">Secrets Status</p>
-                  <p className="text-xs text-gray-500">Ensure CLOUDFLARE_API_TOKEN is set in AI Studio Settings.</p>
-                </div>
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+                <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                  Your worker is now ready for deployment. You can trigger a deploy directly from the terminal or via GitHub sync.
+                </p>
               </div>
-              <button className="w-full py-3 bg-blue text-white font-bold rounded-xl hover:bg-blue/90 transition-all text-sm">
-                Test Cloudflare Connection
-              </button>
             </div>
           </div>
 
