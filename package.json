@@ -1,1 +1,1 @@
-{\n  "name": "acuity-academy",\n  "version": "1.0.0",\n  "dependencies": {\n    "react": "19.x.x",\n    "react-dom": "19.x.x",\n    "@supabase/supabase-js": "latest",\n    "tailwindcss": "latest",\n    "lucide-react": "latest"\n  }\n}
+{\n  "name": "acuityacademy",\n  "version": "1.0.0",\n  "scripts": {\n    "start": "vite",\n    "build": "vite build"\n  },\n  "dependencies": {\n    "vite": "latest"\n  },\n  "devDependencies": {}\n}
