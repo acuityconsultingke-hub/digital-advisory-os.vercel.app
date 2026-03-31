@@ -1,1 +1,43 @@
-{\n  "name": "acuityacademy",\n  "version": "1.0.0",\n  "scripts": {\n    "start": "vite",\n    "build": "vite build"\n  },\n  "dependencies": {\n    "vite": "latest"\n  },\n  "devDependencies": {}\n}
+{
+  "name": "acuityacademy",
+  "version": "1.0.0",
+  "description": "Acuity Academy - Financial Planning Application",
+  "type": "module",
+  "main": "server.ts",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "node --loader tsx/esm ./server.ts"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "express": "^4.21.2",
+    "firebase": "^12.11.0",
+    "vite": "^6.2.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "@supabase/supabase-js": "^2.100.1",
+    "@tailwindcss/vite": "^4.1.14",
+    "dotenv": "^17.2.3",
+    "lucide-react": "^0.546.0",
+    "motion": "^12.23.24",
+    "newrelic": "^13.17.0",
+    "openai": "^6.33.0",
+    "recharts": "^3.8.0",
+    "tsx": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.14.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "autoprefixer": "^10.4.21",
+    "tailwindcss": "^4.1.14",
+    "typescript": "~5.8.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "MIT"
+}
