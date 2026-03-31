@@ -1,0 +1,26 @@
+name: Fix TSX Loader
+
+on:
+  workflow_dispatch:
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Apply surgical patch
+        run: |
+          if grep -q "node --loader tsx/esm ./server.ts" package.json; then
+            sed -i 's|node --loader tsx/esm ./server.ts|tsx server.ts|' package.json
+          fi
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add package.json
+          git commit -m "fix(node): replace deprecated tsx loader with tsx CLI" || echo "No changes to commit"
+          git push
