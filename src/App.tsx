@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   ChevronRight, 
   ChevronLeft, 
+  ChevronDown,
   Save, 
   CheckCircle, 
   User, 
@@ -19,6 +20,9 @@ import {
   AlertCircle,
   Plus,
   Trash2,
+  Edit,
+  X,
+  Activity,
   Calendar,
   Phone,
   Mail,
@@ -51,25 +55,7 @@ import {
   Github
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  auth, 
-  db, 
-  googleProvider, 
-  doc, 
-  getDoc, 
-  setDoc, 
-  onSnapshot 
-} from './firebase';
-import { 
-  signInWithPopup, 
-  onAuthStateChanged, 
-  signOut, 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword,
-  RecaptchaVerifier,
-  signInWithPhoneNumber
-} from 'firebase/auth';
-import { serverTimestamp } from 'firebase/firestore';
+import { supabase } from './lib/supabase';
 
 import { 
   BarChart, 
@@ -438,18 +424,274 @@ const ACADEMY_CONTENT: AcademyContent[] = [
   },
 ];
 
+// Academy Content Management Component
+const AcademyManager = ({ academyContent }: { academyContent: AcademyContent[] }) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingItem, setEditingItem] = useState<AcademyContent | null>(null);
+  const [formData, setFormData] = useState<Partial<AcademyContent>>({
+    title: '',
+    description: '',
+    type: 'article',
+    duration: '',
+    thumbnail: '',
+    content: ''
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleOpenEdit = (item: AcademyContent | null) => {
+    if (item) {
+      setEditingItem(item);
+      setFormData(item);
+    } else {
+      setEditingItem(null);
+      setFormData({
+        title: '',
+        description: '',
+        type: 'article',
+        duration: '',
+        thumbnail: '',
+        content: ''
+      });
+    }
+    setIsEditing(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      if (editingItem) {
+        const { error } = await supabase
+          .from('academy')
+          .update(formData)
+          .eq('id', editingItem.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('academy')
+          .insert([formData]);
+        if (error) throw error;
+      }
+      setIsEditing(false);
+      setEditingItem(null);
+    } catch (error) {
+      console.error("Error saving academy content:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this content?')) return;
+    try {
+      const { error } = await supabase
+        .from('academy')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error deleting academy content:", error);
+    }
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-900 p-8 rounded-3xl border border-gray-200 dark:border-gray-800 shadow-sm col-span-full">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h3 className="text-2xl font-bold text-navy dark:text-white">Academy Content Management</h3>
+          <p className="text-gray-500 dark:text-gray-400">Add, edit, or remove educational resources.</p>
+        </div>
+        <button
+          onClick={() => handleOpenEdit(null)}
+          className="flex items-center space-x-2 px-6 py-3 bg-blue text-white rounded-xl font-bold hover:bg-blue/90 transition-all shadow-lg shadow-blue/20"
+        >
+          <Plus size={20} />
+          <span>Add New Content</span>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {academyContent.map((item) => (
+          <div key={item.id} className="group relative bg-gray-50 dark:bg-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-800 p-4 transition-all hover:shadow-md">
+            <div className="aspect-video rounded-xl overflow-hidden mb-4 bg-gray-200 dark:bg-gray-700">
+              <img 
+                src={item.thumbnail} 
+                alt={item.title} 
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="flex items-center space-x-2 mb-1">
+                  <span className="px-2 py-0.5 bg-blue/10 text-blue text-[10px] font-bold rounded uppercase">{item.type}</span>
+                  <span className="text-[10px] text-gray-400 font-bold uppercase">{item.duration}</span>
+                </div>
+                <h4 className="font-bold text-navy dark:text-white line-clamp-1">{item.title}</h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-1">{item.description}</p>
+              </div>
+              <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button 
+                  onClick={() => handleOpenEdit(item)}
+                  className="p-2 bg-white dark:bg-gray-800 text-blue rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-blue hover:text-white transition-all shadow-sm"
+                >
+                  <Edit size={16} />
+                </button>
+                <button 
+                  onClick={() => handleDelete(item.id)}
+                  className="p-2 bg-white dark:bg-gray-800 text-red-500 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Edit/Add Modal */}
+      <AnimatePresence>
+        {isEditing && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-navy/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white dark:bg-gray-900 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-800"
+            >
+              <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50">
+                <h3 className="text-xl font-bold text-navy dark:text-white">
+                  {editingItem ? 'Edit Academy Content' : 'Add New Academy Content'}
+                </h3>
+                <button onClick={() => setIsEditing(false)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors">
+                  <X size={20} className="text-gray-500" />
+                </button>
+              </div>
+              
+              <form onSubmit={handleSave} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Title</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={formData.title}
+                      onChange={(e) => setFormData({...formData, title: e.target.value})}
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue/20 focus:border-blue outline-none transition-all dark:text-white"
+                      placeholder="e.g. Introduction to Investing"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Type</label>
+                    <select 
+                      value={formData.type}
+                      onChange={(e) => setFormData({...formData, type: e.target.value as any})}
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue/20 focus:border-blue outline-none transition-all dark:text-white"
+                    >
+                      <option value="article">Article</option>
+                      <option value="video">Video</option>
+                      <option value="guide">Guide</option>
+                      <option value="course">Course</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Duration</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={formData.duration}
+                      onChange={(e) => setFormData({...formData, duration: e.target.value})}
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue/20 focus:border-blue outline-none transition-all dark:text-white"
+                      placeholder="e.g. 15 mins"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Thumbnail URL</label>
+                    <input 
+                      type="url" 
+                      required
+                      value={formData.thumbnail}
+                      onChange={(e) => setFormData({...formData, thumbnail: e.target.value})}
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue/20 focus:border-blue outline-none transition-all dark:text-white"
+                      placeholder="https://..."
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Description</label>
+                  <textarea 
+                    required
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    rows={2}
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue/20 focus:border-blue outline-none transition-all dark:text-white resize-none"
+                    placeholder="Short summary of the content..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Full Content</label>
+                  <textarea 
+                    required
+                    value={formData.content}
+                    onChange={(e) => setFormData({...formData, content: e.target.value})}
+                    rows={6}
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue/20 focus:border-blue outline-none transition-all dark:text-white resize-none"
+                    placeholder="The main body of the article or guide..."
+                  />
+                </div>
+
+                <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                  <button 
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="px-6 py-3 text-gray-500 font-bold hover:text-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={loading}
+                    className="px-8 py-3 bg-blue text-white rounded-xl font-bold hover:bg-blue/90 transition-all shadow-lg shadow-blue/20 disabled:opacity-50 flex items-center space-x-2"
+                  >
+                    {loading && <RefreshCw size={18} className="animate-spin" />}
+                    <span>{editingItem ? 'Update Content' : 'Publish Content'}</span>
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 // --- Components ---
 
-const Logo = () => (
-  <div className="flex items-center space-x-1">
-    <span className="text-2xl font-bold text-navy dark:text-white">Acuity</span>
-    <div className="flex -space-x-2">
-      <ChevronRight className="text-blue" size={28} strokeWidth={3} />
-      <ChevronRight className="text-blue opacity-60" size={28} strokeWidth={3} />
+const Logo = ({ size = "md", showText = true }: { size?: "sm" | "md" | "lg"; showText?: boolean }) => {
+  const dimensions = size === "sm" ? "w-8 h-8" : size === "lg" ? "w-16 h-16" : "w-10 h-10";
+  const textSize = size === "lg" ? "text-3xl" : "text-xl";
+  const subTextSize = size === "lg" ? "text-xs" : "text-[10px]";
+  
+  return (
+    <div className={`flex items-center space-x-3`}>
+      <div className={`relative ${dimensions} flex items-center justify-center`}>
+        <div className="absolute inset-0 bg-blue/10 rounded-xl rotate-6"></div>
+        <div className="relative w-full h-full bg-blue text-white rounded-xl flex items-center justify-center shadow-lg shadow-blue/20">
+          <ChevronRight size={size === "lg" ? 32 : 20} className="stroke-[3]" />
+        </div>
+      </div>
+      {showText && (
+        <div className="flex flex-col -space-y-1">
+          <span className={`${textSize} font-black text-navy tracking-tighter uppercase`}>Acuity</span>
+          <span className={`${subTextSize} font-bold text-blue uppercase tracking-[0.3em]`}>Academy</span>
+        </div>
+      )}
     </div>
-    <span className="ml-2 text-xs font-bold text-blue uppercase tracking-widest hidden sm:inline">Academy</span>
-  </div>
-);
+  );
+};
 
 const StepIndicator = ({ current, total }: { current: number; total: number }) => {
   return (
@@ -458,7 +700,7 @@ const StepIndicator = ({ current, total }: { current: number; total: number }) =
         <div 
           key={i}
           className={`h-2 w-8 rounded-full transition-all duration-300 ${
-            i <= current ? 'bg-blue' : 'bg-gray-200'
+            i <= current ? 'bg-cyan' : 'bg-gray-200'
           } ${i === current ? 'w-12' : 'w-8'}`}
         />
       ))}
@@ -469,10 +711,10 @@ const StepIndicator = ({ current, total }: { current: number; total: number }) =
 const SectionHeader = ({ icon: Icon, title, description }: { icon: any; title: string; description?: string }) => (
   <div className="mb-6">
     <div className="flex items-center space-x-3 mb-1">
-      <div className="p-2 bg-blue/10 dark:bg-blue/20 rounded-lg text-blue">
+      <div className="p-2 bg-cyan/10 dark:bg-cyan/20 rounded-lg text-cyan">
         <Icon size={24} />
       </div>
-      <h2 className="text-2xl font-bold text-navy dark:text-white">{title}</h2>
+      <h2 className="text-2xl font-bold text-midnight-navy dark:text-white">{title}</h2>
     </div>
     {description && <p className="text-gray-500 dark:text-gray-400 ml-12">{description}</p>}
   </div>
@@ -494,7 +736,7 @@ const InputField: React.FC<InputFieldProps> = ({ label, value, onChange, type = 
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="px-4 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+      className="px-4 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none transition-all"
     />
   </div>
 );
@@ -547,10 +789,38 @@ export default function App() {
   
   const [clients, setClients] = useState<Client[]>(INITIAL_CLIENTS);
   const [recruits, setRecruits] = useState<Recruit[]>(INITIAL_RECRUITS);
-  const [academyContent] = useState<AcademyContent[]>(ACADEMY_CONTENT);
+  const [academyContent, setAcademyContent] = useState<AcademyContent[]>(ACADEMY_CONTENT);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('All');
 
   const totalSteps = 11;
+
+  // Academy Content Listener
+  useEffect(() => {
+    const fetchAcademyContent = async () => {
+      const { data, error } = await supabase
+        .from('academy')
+        .select('*')
+        .order('id', { ascending: true });
+      
+      if (error) {
+        console.error("Error fetching academy content:", error);
+      } else if (data) {
+        setAcademyContent(data);
+      }
+    };
+
+    fetchAcademyContent();
+
+    const subscription = supabase
+      .channel('academy_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'academy' }, fetchAcademyContent)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, []);
 
   // Theme effect
   useEffect(() => {
@@ -563,40 +833,48 @@ export default function App() {
     }
   }, [isDarkMode]);
 
-  // Firebase Auth Listener
+  // Supabase Auth Listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      const currentUser = session?.user ?? null;
       setUser(currentUser);
       setIsAuthReady(true);
       
       if (currentUser) {
-        // Load data from Firestore if it exists
-        const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          if (data.formData) setFormData(data.formData);
-          if (data.currentStep !== undefined) setStep(data.currentStep);
+        // Load data from Supabase if it exists
+        const { data: userDoc, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', currentUser.id)
+          .single();
+        
+        if (!error && userDoc) {
+          if (userDoc.formData) setFormData(userDoc.formData);
+          if (userDoc.currentStep !== undefined) setStep(userDoc.currentStep);
         }
       }
     });
-    return () => unsubscribe();
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Sync progress to Firestore
-  const syncToFirestore = async (data: FormData, currentStep: number) => {
-    if (auth.currentUser) {
+  // Sync progress to Supabase
+  const syncToSupabase = async (data: FormData, currentStep: number) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
       try {
-        await setDoc(doc(db, 'users', auth.currentUser.uid), {
-          uid: auth.currentUser.uid,
-          email: auth.currentUser.email,
-          displayName: auth.currentUser.displayName,
-          formData: data,
-          currentStep: currentStep,
-          updatedAt: serverTimestamp()
-        }, { merge: true });
+        const { error } = await supabase
+          .from('users')
+          .upsert({
+            id: user.id,
+            email: user.email,
+            formData: data,
+            currentStep: currentStep,
+            updated_at: new Date().toISOString()
+          });
+        if (error) throw error;
         setLastSaved(new Date().toLocaleTimeString());
       } catch (error) {
-        console.error("Error syncing to Firestore", error);
+        console.error("Error syncing to Supabase", error);
       }
     }
   };
@@ -607,7 +885,7 @@ export default function App() {
       localStorage.setItem('acuity_financial_planner_data', JSON.stringify(formData));
       localStorage.setItem('acuity_financial_planner_step', step.toString());
       if (user) {
-        syncToFirestore(formData, step);
+        syncToSupabase(formData, step);
       }
     }
   }, [formData, step, user, isAuthReady]);
@@ -617,7 +895,7 @@ export default function App() {
       setShowAuthModal(true);
       return;
     }
-    syncToFirestore(formData, step);
+    syncToSupabase(formData, step);
   };
 
   const handleGoogleSignIn = async () => {
@@ -625,16 +903,16 @@ export default function App() {
     setAuthLoading(true);
     setAuthError(null);
     try {
-      await signInWithPopup(auth, googleProvider);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`
+        }
+      });
+      if (error) throw error;
     } catch (err: any) {
-      console.error("Google Auth Error:", err);
-      if (err.code === 'auth/popup-blocked') {
-        setAuthError("Popup was blocked. Please allow popups for this site.");
-      } else if (err.code === 'auth/cancelled-popup-request') {
-        // Ignore, user just closed it or another one was opened
-      } else {
-        setAuthError(err.message);
-      }
+      console.error("Supabase Auth Error:", err);
+      setAuthError(err.message);
     } finally {
       setAuthLoading(false);
     }
@@ -686,9 +964,9 @@ export default function App() {
   const netWorth = (totalCashAssets + totalInvestedAssets + totalPersonalAssets) - totalLiabilities;
 
   const assetData = [
-    { name: 'Cash', value: totalCashAssets, color: '#3b82f6' },
-    { name: 'Investments', value: totalInvestedAssets, color: '#10b981' },
-    { name: 'Personal', value: totalPersonalAssets, color: '#6366f1' },
+    { name: 'Cash', value: totalCashAssets, color: '#48A9D6' },
+    { name: 'Investments', value: totalInvestedAssets, color: '#1B254B' },
+    { name: 'Personal', value: totalPersonalAssets, color: '#A8D5E2' },
   ].filter(d => d.value > 0);
 
   const cashFlowData = [
@@ -705,7 +983,7 @@ export default function App() {
             <div className="flex items-center space-x-4">
               <button 
                 onClick={() => setView('report')}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue text-white rounded-lg font-medium hover:bg-blue/90 transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 bg-cyan text-white rounded-lg font-medium hover:bg-cyan/90 transition-colors"
               >
                 <FileBarChart size={18} />
                 <span>View Full Report</span>
@@ -735,7 +1013,7 @@ export default function App() {
             </div>
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
               <p className="text-sm font-medium text-gray-500 mb-1">Monthly Surplus</p>
-              <p className={`text-2xl font-bold ${monthlySurplus >= 0 ? 'text-blue' : 'text-red-600'}`}>
+              <p className={`text-2xl font-bold ${monthlySurplus >= 0 ? 'text-cyan' : 'text-red-600'}`}>
                 ${monthlySurplus.toLocaleString()}
               </p>
             </div>
@@ -756,7 +1034,7 @@ export default function App() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
               <h3 className="text-lg font-bold mb-6 flex items-center space-x-2">
-                <TrendingUp size={20} className="text-blue" />
+                <TrendingUp size={20} className="text-cyan" />
                 <span>Monthly Cash Flow</span>
               </h3>
               <div className="h-64">
@@ -774,7 +1052,7 @@ export default function App() {
 
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
               <h3 className="text-lg font-bold mb-6 flex items-center space-x-2">
-                <History size={20} className="text-green-600" />
+                <History size={20} className="text-navy" />
                 <span>Asset Allocation</span>
               </h3>
               <div className="h-64">
@@ -893,7 +1171,7 @@ export default function App() {
               </button>
               <button 
                 onClick={() => window.print()}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue text-white rounded-lg font-medium hover:bg-blue/90 transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 bg-cyan text-white rounded-lg font-medium hover:bg-cyan/90 transition-colors"
               >
                 <Download size={18} />
                 <span>Download PDF</span>
@@ -908,12 +1186,12 @@ export default function App() {
             <p className="text-xl text-gray-500">Prepared for {formData.clientName} {formData.spouseName && `& ${formData.spouseName}`}</p>
             <div className="mt-8 p-4 border-y border-gray-200 inline-block">
               <p className="text-sm font-bold text-navy uppercase tracking-widest">Presented By: Alex Kadzitu</p>
-              <p className="text-xs text-blue font-medium mt-1">www.acuity.co.ke</p>
+              <p className="text-xs text-cyan font-medium mt-1">www.acuity.co.ke</p>
             </div>
           </div>
 
           <div className="mb-16">
-            <h2 className="text-2xl font-bold text-navy mb-8 border-b-2 border-blue pb-2">FINANCIAL HEALTH CHECKLIST</h2>
+            <h2 className="text-2xl font-bold text-navy mb-8 border-b-2 border-cyan pb-2">FINANCIAL HEALTH CHECKLIST</h2>
             <div className="space-y-6">
               {pillars.map((pillar, idx) => (
                 <motion.div 
@@ -923,7 +1201,7 @@ export default function App() {
                   transition={{ delay: idx * 0.1 }}
                   className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex items-start space-x-6"
                 >
-                  <div className="text-4xl font-black text-blue/20 w-12 flex-shrink-0">{(idx + 1).toString().padStart(2, '0')}</div>
+                  <div className="text-4xl font-black text-cyan/20 w-12 flex-shrink-0">{(idx + 1).toString().padStart(2, '0')}</div>
                   <div className="flex-grow">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="text-lg font-bold text-navy uppercase">{pillar.title}</h3>
@@ -947,7 +1225,7 @@ export default function App() {
           </div>
 
           <div className="mb-16">
-            <h2 className="text-2xl font-bold text-navy mb-8 border-b-2 border-blue pb-2 uppercase tracking-tight">Debt Restructure Strategy</h2>
+            <h2 className="text-2xl font-bold text-navy mb-8 border-b-2 border-cyan pb-2 uppercase tracking-tight">Debt Restructure Strategy</h2>
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -965,7 +1243,7 @@ export default function App() {
                       <tr key={idx} className="text-sm">
                         <td className="px-6 py-4 font-medium text-navy">{liab.label}</td>
                         <td className="px-6 py-4 text-right text-gray-600">KES {current.toLocaleString()}</td>
-                        <td className="px-6 py-4 text-right text-blue font-bold">KES {target.toLocaleString()}</td>
+                        <td className="px-6 py-4 text-right text-cyan font-bold">KES {target.toLocaleString()}</td>
                       </tr>
                     );
                   })}
@@ -974,7 +1252,7 @@ export default function App() {
                     <td className="px-6 py-4 text-right">
                       KES {formData.liabilities.reduce((acc, l) => acc + (Number(l.value) * 0.02), 0).toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 text-right text-blue">
+                    <td className="px-6 py-4 text-right text-cyan">
                       KES {formData.liabilities.reduce((acc, l) => acc + (Number(l.value) * 0.012), 0).toLocaleString()}
                     </td>
                   </tr>
@@ -994,7 +1272,7 @@ export default function App() {
               {investmentUniverse.map((item, idx) => (
                 <div key={idx} className="bg-white p-6 rounded-2xl border border-gray-200 flex flex-col justify-between">
                   <div>
-                    <h3 className="text-sm font-black text-blue mb-2">{item.name}</h3>
+                    <h3 className="text-sm font-black text-cyan mb-2">{item.name}</h3>
                     <p className="text-xs text-gray-600 leading-relaxed mb-4">{item.details}</p>
                   </div>
                   <a 
@@ -1014,11 +1292,11 @@ export default function App() {
             <div className="absolute top-0 right-0 w-32 h-32 bg-blue/20 rounded-full -mr-16 -mt-16 blur-3xl"></div>
             <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue/20 rounded-full -ml-16 -mb-16 blur-3xl"></div>
             <h3 className="text-2xl font-bold mb-4">Next Steps</h3>
-            <p className="text-blue-100 mb-8 max-w-2xl mx-auto">
+            <p className="text-cyan/80 mb-8 max-w-2xl mx-auto">
               This report provides a high-level overview. We recommend a detailed consultation to dive deeper into each pillar and refine your strategy.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <button className="px-8 py-3 bg-blue text-white font-bold rounded-xl hover:bg-blue/90 transition-colors shadow-lg shadow-blue/20">
+              <button className="px-8 py-3 bg-cyan text-white font-bold rounded-xl hover:bg-cyan/90 transition-colors shadow-lg shadow-cyan/20">
                 Schedule Consultation
               </button>
               {!user && (
@@ -1052,13 +1330,13 @@ export default function App() {
                 { id: 'recruitment', label: 'Recruitment', icon: Briefcase },
                 { id: 'academy', label: 'Academy', icon: GraduationCap },
                 { id: 'system', label: 'System', icon: Settings },
-              ].filter(item => (item.id !== 'clients' && item.id !== 'recruitment' && item.id !== 'system') || (user && user.email === 'akadzitu@gmail.com')).map((item) => (
+              ].filter(item => (item.id !== 'clients' && item.id !== 'recruitment' && item.id !== 'system') || (user && (user.email === 'akadzitu@gmail.com' || user.email === 'acuityconsultingke@gmail.com'))).map((item) => (
                 <button
                   key={item.id}
                   onClick={() => setActiveModule(item.id as any)}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
                     activeModule === item.id 
-                      ? 'bg-blue text-white shadow-lg shadow-blue/20' 
+                      ? 'bg-cyan text-white shadow-lg shadow-cyan/20' 
                       : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                   }`}
                 >
@@ -1071,7 +1349,7 @@ export default function App() {
             <div className="flex items-center space-x-3">
               <button 
                 onClick={() => setIsDarkMode(!isDarkMode)}
-                className="p-2 text-gray-400 hover:text-blue dark:hover:text-blue transition-colors rounded-lg bg-gray-100 dark:bg-gray-800"
+                className="p-2 text-gray-400 hover:text-cyan dark:hover:text-cyan transition-colors rounded-lg bg-gray-100 dark:bg-gray-800"
                 title="Toggle Dark Mode"
               >
                 {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
@@ -1106,7 +1384,7 @@ export default function App() {
               
               {user && (
                 <div className="flex items-center space-x-2 pl-2 border-l border-gray-200 dark:border-gray-700">
-                  <div className="w-8 h-8 bg-blue text-white rounded-full flex items-center justify-center text-xs font-bold">
+                  <div className="w-8 h-8 bg-cyan text-white rounded-full flex items-center justify-center text-xs font-bold">
                     {user.email?.[0].toUpperCase() || 'U'}
                   </div>
                 </div>
@@ -1132,16 +1410,20 @@ export default function App() {
                 >
                   {/* Step 0: Real Sign-Up / Login */}
                   {step === 0 && (
-                    <div className="space-y-8 py-10">
-                      <div className="text-center mb-12">
-                        <Logo />
-                        <h1 className="text-4xl font-black text-navy dark:text-white mt-6 mb-4 uppercase tracking-tight">Welcome to Acuity Consulting</h1>
-                        <p className="text-lg text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
-                          To begin your comprehensive financial plan and ensure your progress is saved, please sign up or log in.
+                    <div className="relative space-y-8 py-10 chevron-motif rounded-3xl overflow-hidden">
+                      <div className="absolute inset-0 bg-white/90 dark:bg-midnight-navy/95 backdrop-blur-[2px]"></div>
+                      <div className="relative text-center mb-12 px-6">
+                        <Logo size="lg" />
+                        <h1 className="text-4xl md:text-5xl font-black text-midnight-navy dark:text-white mt-8 mb-4 uppercase tracking-tighter leading-none">
+                          Digital Advisory <br/>
+                          <span className="text-electric-cyan">Operating System</span>
+                        </h1>
+                        <p className="text-lg text-gray-500 dark:text-gray-400 max-w-xl mx-auto font-medium">
+                          Empowering your financial future through data-driven insights and strategic planning.
                         </p>
                       </div>
                       
-                      <div className="max-w-md mx-auto space-y-6">
+                      <div className="relative max-w-md mx-auto space-y-6 px-6">
                         {user ? (
                           <div className="bg-green-50 dark:bg-green-900/20 p-8 rounded-3xl border border-green-100 dark:border-green-900/30 text-center">
                             <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1151,13 +1433,13 @@ export default function App() {
                             <p className="text-gray-500 dark:text-gray-400 mb-6">You're all set to continue your financial plan.</p>
                             <button 
                               onClick={nextStep}
-                              className="w-full py-4 bg-blue text-white font-bold rounded-2xl hover:bg-blue/90 transition-all shadow-lg shadow-blue/20 flex items-center justify-center space-x-2"
+                              className="w-full py-4 bg-cyan text-white font-bold rounded-2xl hover:bg-cyan/90 transition-all shadow-lg shadow-cyan/20 flex items-center justify-center space-x-2"
                             >
                               <span>Continue to Questionnaire</span>
                               <ChevronRight size={20} />
                             </button>
                             <button 
-                              onClick={() => signOut(auth)}
+                              onClick={() => supabase.auth.signOut()}
                               className="mt-4 text-sm text-gray-400 hover:text-red-500 font-medium transition-colors"
                             >
                               Sign Out
@@ -1189,7 +1471,7 @@ export default function App() {
                               <InputField label="Email Address" value={formData.client.email} onChange={(v) => updateField('client.email', v)} type="email" placeholder="you@example.com" />
                               <button 
                                 onClick={() => setShowAuthModal(true)}
-                                className="w-full py-4 bg-navy dark:bg-blue text-white font-bold rounded-2xl hover:bg-navy/90 dark:hover:bg-blue/90 transition-all shadow-lg shadow-navy/20 dark:shadow-blue/20"
+                                className="w-full py-4 bg-navy dark:bg-cyan text-white font-bold rounded-2xl hover:bg-navy/90 dark:hover:bg-cyan/90 transition-all shadow-lg shadow-navy/20 dark:shadow-cyan/20"
                               >
                                 Sign Up / Login with Email
                               </button>
@@ -1223,8 +1505,8 @@ export default function App() {
                     <InputField label="Date" value={formData.date} onChange={(v) => updateField('date', v)} type="date" />
                   </div>
                   <div className="bg-blue/5 dark:bg-blue/10 p-6 rounded-xl border border-blue/10 dark:border-blue/20 flex items-start space-x-4">
-                    <AlertCircle className="text-blue mt-1 flex-shrink-0" size={20} />
-                    <p className="text-sm text-blue dark:text-blue-300 leading-relaxed">
+                    <AlertCircle className="text-cyan mt-1 flex-shrink-0" size={20} />
+                    <p className="text-sm text-cyan dark:text-cyan-300 leading-relaxed">
                       All information provided is treated with the strictest confidence. Your data is used solely for the purpose of providing professional financial advice.
                     </p>
                   </div>
@@ -1239,7 +1521,7 @@ export default function App() {
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                     {/* Client Column */}
                     <div className="space-y-4">
-                      <h3 className="font-bold text-blue-600 uppercase tracking-wider text-xs">Primary Client</h3>
+                      <h3 className="font-bold text-cyan uppercase tracking-wider text-xs">Primary Client</h3>
                       <InputField label="Full Name" value={formData.client.name} onChange={(v) => updateField('client.name', v)} />
                       <InputField label="Postal Address" value={formData.client.postalAddress} onChange={(v) => updateField('client.postalAddress', v)} />
                       <InputField label="Residential Address" value={formData.client.residentialAddress} onChange={(v) => updateField('client.residentialAddress', v)} />
@@ -1263,7 +1545,7 @@ export default function App() {
 
                     {/* Spouse Column */}
                     <div className="space-y-4">
-                      <h3 className="font-bold text-blue-600 uppercase tracking-wider text-xs">Spouse / Partner</h3>
+                      <h3 className="font-bold text-cyan uppercase tracking-wider text-xs">Spouse / Partner</h3>
                       <InputField label="Full Name" value={formData.spouse.name} onChange={(v) => updateField('spouse.name', v)} />
                       <InputField label="Postal Address" value={formData.spouse.postalAddress} onChange={(v) => updateField('spouse.postalAddress', v)} />
                       <InputField label="Residential Address" value={formData.spouse.residentialAddress} onChange={(v) => updateField('spouse.residentialAddress', v)} />
@@ -1336,7 +1618,7 @@ export default function App() {
                       ))}
                       <button 
                         onClick={() => updateField('dependents', [...formData.dependents, { id: Math.random().toString(), name: '', dob: '', currentSchool: '', futureSchool: '' }])}
-                        className="flex items-center space-x-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg font-medium hover:bg-blue-100 transition-colors"
+                        className="flex items-center space-x-2 px-4 py-2 bg-cyan/10 text-cyan rounded-lg font-medium hover:bg-cyan/20 transition-colors"
                       >
                         <Plus size={20} />
                         <span>Add Dependent</span>
@@ -2073,7 +2355,10 @@ export default function App() {
                 </div>
                 <div className="absolute top-4 left-4">
                   <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-white ${
-                    item.type === 'guide' ? 'bg-blue' : item.type === 'video' ? 'bg-red-500' : 'bg-green-500'
+                    item.type === 'guide' ? 'bg-blue' : 
+                    item.type === 'video' ? 'bg-red-500' : 
+                    item.type === 'course' ? 'bg-purple-500' :
+                    'bg-green-500'
                   }`}>
                     {item.type}
                   </span>
@@ -2115,6 +2400,22 @@ export default function App() {
             <p className="text-gray-500 dark:text-gray-400">Track and manage potential broker recruits.</p>
           </div>
           <div className="flex items-center space-x-3">
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+              <select 
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="pl-10 pr-10 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none cursor-pointer text-sm font-bold text-navy dark:text-white"
+              >
+                <option value="All">All Statuses</option>
+                <option value="Applied">Applied</option>
+                <option value="Interviewing">Interviewing</option>
+                <option value="Offered">Offered</option>
+                <option value="Onboarded">Onboarded</option>
+                <option value="Rejected">Rejected</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
+            </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
               <input 
@@ -2163,7 +2464,10 @@ export default function App() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
-                {recruits.filter(r => r.fullName.toLowerCase().includes(searchQuery.toLowerCase())).map((recruit) => (
+                {recruits
+                  .filter(r => r.fullName.toLowerCase().includes(searchQuery.toLowerCase()))
+                  .filter(r => statusFilter === 'All' || r.status === statusFilter)
+                  .map((recruit) => (
                   <tr key={recruit.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-3">
@@ -2380,6 +2684,11 @@ export default function App() {
               </button>
             </div>
           </div>
+
+          {/* Academy Content Management - Admin Only */}
+          { (user?.email === 'akadzitu@gmail.com' || user?.email === 'acuityconsultingke@gmail.com') && (
+            <AcademyManager academyContent={academyContent} />
+          )}
         </div>
 
         <div className="bg-red-50 dark:bg-red-900/10 p-10 rounded-[2.5rem] border border-red-100 dark:border-red-900/20 relative overflow-hidden">
@@ -2538,26 +2847,16 @@ const AuthModal = ({ isOpen, onClose, onLogin }: { isOpen: boolean; onClose: () 
 
   if (!isOpen) return null;
 
-  const setupRecaptcha = () => {
-    if ((window as any).recaptchaVerifier) {
-      (window as any).recaptchaVerifier.clear();
-    }
-    (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-      size: 'invisible',
-      callback: () => {
-        // reCAPTCHA solved, allow signInWithPhoneNumber.
-      }
-    });
-  };
-
   const handleEmailAuth = async () => {
     setLoading(true);
     setError('');
     try {
       if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
       }
       onLogin(email);
     } catch (err: any) {
@@ -2571,11 +2870,11 @@ const AuthModal = ({ isOpen, onClose, onLogin }: { isOpen: boolean; onClose: () 
     setLoading(true);
     setError('');
     try {
-      setupRecaptcha();
-      const appVerifier = (window as any).recaptchaVerifier;
-      const confirmationResult = await signInWithPhoneNumber(auth, phone, appVerifier);
-      setVerificationId(confirmationResult.verificationId);
-      (window as any).confirmationResult = confirmationResult;
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: phone,
+      });
+      if (error) throw error;
+      setVerificationId('otp-sent');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -2587,8 +2886,12 @@ const AuthModal = ({ isOpen, onClose, onLogin }: { isOpen: boolean; onClose: () 
     setLoading(true);
     setError('');
     try {
-      const confirmationResult = (window as any).confirmationResult;
-      await confirmationResult.confirm(otp);
+      const { error } = await supabase.auth.verifyOtp({
+        phone: phone,
+        token: otp,
+        type: 'sms'
+      });
+      if (error) throw error;
       onLogin(phone);
     } catch (err: any) {
       setError(err.message);
@@ -2613,13 +2916,13 @@ const AuthModal = ({ isOpen, onClose, onLogin }: { isOpen: boolean; onClose: () 
         <div className="flex space-x-2 mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
           <button 
             onClick={() => setMethod('email')}
-            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${method === 'email' ? 'bg-white dark:bg-gray-700 text-blue shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${method === 'email' ? 'bg-white dark:bg-gray-700 text-cyan shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
           >
             Email
           </button>
           <button 
             onClick={() => setMethod('phone')}
-            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${method === 'phone' ? 'bg-white dark:bg-gray-700 text-blue shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${method === 'phone' ? 'bg-white dark:bg-gray-700 text-cyan shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
           >
             Phone
           </button>
@@ -2635,7 +2938,7 @@ const AuthModal = ({ isOpen, onClose, onLogin }: { isOpen: boolean; onClose: () 
               <button 
                 onClick={handleEmailAuth}
                 disabled={loading}
-                className="w-full py-4 bg-blue text-white font-bold rounded-2xl hover:bg-blue/90 transition-all shadow-lg shadow-blue/20 disabled:opacity-50"
+                className="w-full py-4 bg-cyan text-white font-bold rounded-2xl hover:bg-cyan/90 transition-all shadow-lg shadow-cyan/20 disabled:opacity-50"
               >
                 {loading ? 'Processing...' : (isSignUp ? 'Create Account' : 'Login')}
               </button>
@@ -2649,7 +2952,7 @@ const AuthModal = ({ isOpen, onClose, onLogin }: { isOpen: boolean; onClose: () 
                   <button 
                     onClick={handlePhoneAuth}
                     disabled={loading}
-                    className="w-full py-4 bg-blue text-white font-bold rounded-2xl hover:bg-blue/90 transition-all shadow-lg shadow-blue/20 disabled:opacity-50"
+                    className="w-full py-4 bg-cyan text-white font-bold rounded-2xl hover:bg-cyan/90 transition-all shadow-lg shadow-cyan/20 disabled:opacity-50"
                   >
                     {loading ? 'Sending OTP...' : 'Send Verification Code'}
                   </button>
@@ -2664,7 +2967,7 @@ const AuthModal = ({ isOpen, onClose, onLogin }: { isOpen: boolean; onClose: () 
                   >
                     {loading ? 'Verifying...' : 'Verify & Continue'}
                   </button>
-                  <button onClick={() => setVerificationId('')} className="w-full text-xs text-blue font-bold hover:underline">Change Phone Number</button>
+                  <button onClick={() => setVerificationId('')} className="w-full text-xs text-cyan font-bold hover:underline">Change Phone Number</button>
                 </>
               )}
             </>
@@ -2673,7 +2976,7 @@ const AuthModal = ({ isOpen, onClose, onLogin }: { isOpen: boolean; onClose: () 
           <div className="text-center">
             <button 
               onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-blue font-bold hover:underline"
+              className="text-sm text-cyan font-bold hover:underline"
             >
               {isSignUp ? 'Already have an account? Login' : "Don't have an account? Sign Up"}
             </button>
