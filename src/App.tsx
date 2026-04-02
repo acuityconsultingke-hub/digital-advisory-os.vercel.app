@@ -55,7 +55,7 @@ import {
   Github
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from './lib/supabase';
+import { supabase, isConfigured as isSupabaseConfigured } from './lib/supabase';
 
 import { 
   BarChart, 
@@ -797,6 +797,7 @@ export default function App() {
 
   // Academy Content Listener
   useEffect(() => {
+    if (!isSupabaseConfigured) return;
     const fetchAcademyContent = async () => {
       const { data, error } = await supabase
         .from('academy')
@@ -835,6 +836,10 @@ export default function App() {
 
   // Supabase Auth Listener
   useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setIsAuthReady(true); // Allow app to continue without auth
+      return;
+    }
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
@@ -859,6 +864,7 @@ export default function App() {
 
   // Sync progress to Supabase
   const syncToSupabase = async (data: FormData, currentStep: number) => {
+    if (!isSupabaseConfigured) return;
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       try {
@@ -891,6 +897,12 @@ export default function App() {
   }, [formData, step, user, isAuthReady]);
 
   const saveProgress = () => {
+    if (!isSupabaseConfigured) {
+      localStorage.setItem('acuity_financial_planner_data', JSON.stringify(formData));
+      localStorage.setItem('acuity_financial_planner_step', step.toString());
+      setLastSaved(new Date().toLocaleTimeString() + ' (Local Only)');
+      return;
+    }
     if (!user) {
       setShowAuthModal(true);
       return;
@@ -1316,6 +1328,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 font-sans selection:bg-blue/10">
+      {!isSupabaseConfigured && (
+        <div className="bg-amber-500 text-white px-4 py-2 text-center text-sm font-bold flex items-center justify-center space-x-2">
+          <AlertCircle size={16} />
+          <span>Supabase is not configured. Some features like cloud sync and authentication will be disabled.</span>
+        </div>
+      )}
       {/* Header */}
       <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4">
